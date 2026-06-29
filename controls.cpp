@@ -158,6 +158,16 @@ void handleKeyboard(unsigned char         key,
             break;
 
         // ---------------------------------------------------------------------
+        // C / c — Reset Camera (rotation + pan)
+        // ---------------------------------------------------------------------
+        case 'C':
+        case 'c':
+            simState.sceneRotation = 0.0f;
+            simState.panX          = 0.0f;
+            simState.panY          = 0.0f;
+            break;
+
+        // ---------------------------------------------------------------------
         // Z / z — Zoom In
         // ---------------------------------------------------------------------
         case 'Z':
@@ -334,46 +344,72 @@ void handleSpecialKeys(int       key,
 // =============================================================================
 void handleMouse(int       button,
                  int       state,
-                 int       /*x*/,
-                 int       /*y*/,
+                 int       x,
+                 int       y,
                  SimState& simState)
 {
-    // Only act on button-down events (ignore releases for wheel)
-    if (state != GLUT_DOWN) return;
-
     switch (button)
     {
         // ---------------------------------------------------------------------
-        // Mouse Wheel Up — Zoom In
+        // Mouse Wheel Up — Zoom In (FreeGLUT button 3)
         // ---------------------------------------------------------------------
-        // FreeGLUT encodes scroll-up as button 3.
-        // Each tick multiplies zoom by ZOOM_STEP_SCROLL (slightly smaller
-        // step than keyboard zoom for finer control with the wheel).
-        // ---------------------------------------------------------------------
-        case 3:   // scroll wheel up
-        {
-            float newZoom      = simState.zoomLevel * ZOOM_STEP_SCROLL;
-            simState.zoomLevel = clampf(newZoom, MIN_ZOOM, MAX_ZOOM);
+        case 3:
+            if (state == GLUT_DOWN) {
+                float newZoom      = simState.zoomLevel * ZOOM_STEP_SCROLL;
+                simState.zoomLevel = clampf(newZoom, MIN_ZOOM, MAX_ZOOM);
+            }
             break;
-        }
 
         // ---------------------------------------------------------------------
-        // Mouse Wheel Down — Zoom Out
+        // Mouse Wheel Down — Zoom Out (FreeGLUT button 4)
         // ---------------------------------------------------------------------
-        // FreeGLUT encodes scroll-down as button 4.
-        // ---------------------------------------------------------------------
-        case 4:   // scroll wheel down
-        {
-            float newZoom      = simState.zoomLevel / ZOOM_STEP_SCROLL;
-            simState.zoomLevel = clampf(newZoom, MIN_ZOOM, MAX_ZOOM);
+        case 4:
+            if (state == GLUT_DOWN) {
+                float newZoom      = simState.zoomLevel / ZOOM_STEP_SCROLL;
+                simState.zoomLevel = clampf(newZoom, MIN_ZOOM, MAX_ZOOM);
+            }
             break;
-        }
 
-        // Left click, right click, middle click — reserved for future use
-        // (e.g. click-to-select planet by world-space hit test)
+        // ---------------------------------------------------------------------
+        // Left Button — Begin / End scene rotation drag
+        // ---------------------------------------------------------------------
         case GLUT_LEFT_BUTTON:
-        case GLUT_RIGHT_BUTTON:
+            if (state == GLUT_DOWN) {
+                simState.isDragging        = true;
+                simState.dragStartX        = x;
+                simState.dragStartY        = y;
+                simState.dragStartRotation = simState.sceneRotation;
+            } else {
+                simState.isDragging = false;
+            }
+            break;
+
+        // ---------------------------------------------------------------------
+        // Middle Button — Begin / End camera pan drag
+        // ---------------------------------------------------------------------
         case GLUT_MIDDLE_BUTTON:
+            if (state == GLUT_DOWN) {
+                simState.isPanning        = true;
+                simState.panStartX        = x;
+                simState.panStartY        = y;
+                simState.panStartWorldX   = simState.panX;
+                simState.panStartWorldY   = simState.panY;
+            } else {
+                simState.isPanning = false;
+            }
+            break;
+
+        // ---------------------------------------------------------------------
+        // Right Button — Reset camera (rotation + pan) back to default
+        // ---------------------------------------------------------------------
+        case GLUT_RIGHT_BUTTON:
+            if (state == GLUT_DOWN) {
+                simState.sceneRotation = 0.0f;
+                simState.panX          = 0.0f;
+                simState.panY          = 0.0f;
+            }
+            break;
+
         default:
             break;
     }
