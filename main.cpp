@@ -42,6 +42,7 @@
 #endif
 
 #include <vector>
+#include <memory>    // std::unique_ptr, std::make_unique
 #include <cstdlib>   // std::exit
 
 // =============================================================================
@@ -68,13 +69,16 @@ static const float WORLD_HALF_W       = 160.0f;
 // Everything else is passed by reference through the call chain.
 // =============================================================================
 static SimState            g_simState;
-static Planet*             g_sun     = nullptr;
+static std::unique_ptr<Planet> g_sun;
 static std::vector<Planet> g_planets;
 static std::vector<StarPoint> g_stars;
 
 // Window dimensions (updated in reshape callback)
 static int g_windowW = WINDOW_WIDTH;
 static int g_windowH = WINDOW_HEIGHT;
+
+// Forward declaration (updateProjection is defined after display())
+static void updateProjection();
 
 // =============================================================================
 // createSolarSystem()
@@ -107,7 +111,7 @@ static void createSolarSystem()
     // =========================================================================
     // orbitRadiusX = orbitRadiusY = 0 → stays at (0,0)
     // Large size and slow self-rotation for a dramatic central body
-    g_sun = new Planet(
+    g_sun = std::make_unique<Planet>(
         "Sun",      // name
         -1,         // id (-1 = not selectable)
         11.0f,      // size (radius in world units)
@@ -337,31 +341,40 @@ static void display()
 {
     clearScene();
 
+    // Apply the single unified projection (zoom + aspect).
+    // ZOOM BUG FIX: Previously the starfield used a separate non-zoomed
+    // glOrtho pass, which put stars and planets in different coordinate
+    // spaces. Now everything shares one projection — planets, orbit paths,
+    // and stars all scale together correctly when zooming.
+    updateProjection();
+
     // ------------------------------------------------------------------
     // Pass 1 — Starfield
-    // Use a FIXED projection (no zoom) so stars fill the screen evenly
-    // regardless of zoom level. Stars represent the infinite background.
+    // Draw with identity modelview (before scene rotation/pan) so stars
+    // appear as a fixed backdrop. They still zoom slightly with the
+    // projection which looks natural (moving through space feeling).
     // ------------------------------------------------------------------
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    float aspect = static_cast<float>(g_windowW) /
-                   static_cast<float>(g_windowH > 0 ? g_windowH : 1);
-    glOrtho(-WORLD_HALF_W, WORLD_HALF_W,
-            -WORLD_HALF_W / aspect, WORLD_HALF_W / aspect,
-            -500.0, 500.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     drawStarfield(g_stars);
 
     // ------------------------------------------------------------------
     // Pass 2 — Solar System (orbit paths + planets + moons)
-    // Apply zoom via projection: dividing glOrtho bounds by zoomLevel
-    // makes the view volume smaller = everything appears larger (zoom in).
-    // The modelview stays as identity — planets use raw world coordinates.
+    // Apply scene rotation and pan ONCE on the modelview here. All
+    // subsequent planet draws use glPushMatrix/glPopMatrix relative to
+    // this base transform, so rotation and pan affect the whole scene
+    // uniformly — orbit paths and planet bodies always stay in sync.
+    //
+    // GRAPHICS CONCEPT — Camera as Inverse World Transform:
+    //   Legacy OpenGL has no camera. We rotate/translate the WORLD.
+    //   glRotatef spins the entire scene around the origin == orbiting
+    //   a camera around the scene centre. glTranslatef == panning.
     // ------------------------------------------------------------------
-    updateProjection();
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glTranslatef(g_simState.panX, g_simState.panY, 0.0f);
+    glRotatef(g_simState.sceneRotation, 0.0f, 0.0f, 1.0f);
+
     drawSolarSystem(
         *g_sun,
         g_planets,
@@ -514,6 +527,54 @@ static void mouseCallback(int button, int state, int x, int y)
 }
 
 // =============================================================================
+// GLUT Callback: motionCallback(x, y)
+// =============================================================================
+// Called when the mouse moves while a button is held (glutMotionFunc).
+//
+// Left button drag  → rotate entire solar system around Z axis
+// Middle button drag → pan the camera
+//
+// GRAPHICS CONCEPT — Mouse-to-World Mapping:
+//   Screen pixels must be converted to world-space deltas.
+//   dx pixels * (worldWidth / windowWidth) gives world units per pixel.
+//   We use this to make pan speed independent of zoom level.
+// =============================================================================
+static void motionCallback(int x, int y)
+{
+    if (g_simState.isDragging)
+    {
+        // Convert horizontal pixel delta to rotation degrees.
+        // 0.4 deg/pixel gives a comfortable drag feel.
+        int dx = x - g_simState.dragStartX;
+        int dy = y - g_simState.dragStartY;
+        g_simState.sceneRotation = g_simState.dragStartRotation
+                                   + static_cast<float>(dx) * 0.4f;
+        (void)dy;   // vertical drag unused for Z-rotation — could add tilt later
+        glutPostRedisplay();
+    }
+
+    if (g_simState.isPanning)
+    {
+        // Convert pixel delta to world-space delta.
+        // World width visible = 2 * WORLD_HALF_W / zoomLevel
+        float worldW = 2.0f * WORLD_HALF_W / g_simState.zoomLevel;
+        float worldH = worldW * static_cast<float>(g_windowH) /
+                                static_cast<float>(g_windowW > 0 ? g_windowW : 1);
+
+        float dx = static_cast<float>(x - g_simState.panStartX)
+                   * (worldW / static_cast<float>(g_windowW));
+        float dy = static_cast<float>(y - g_simState.panStartY)
+                   * (worldH / static_cast<float>(g_windowH));
+
+        // Y is flipped: window Y grows downward, world Y grows upward
+        g_simState.panX = g_simState.panStartWorldX + dx;
+        g_simState.panY = g_simState.panStartWorldY - dy;
+
+        glutPostRedisplay();
+    }
+}
+
+// =============================================================================
 // initOpenGL()
 // =============================================================================
 // Configures one-time OpenGL state that applies for the entire session.
@@ -567,9 +628,13 @@ static void printStartupInfo()
     printf("║   T          Reset speed to 1.0x                 ║\n");
     printf("╠══════════════════════════════════════════════════╣\n");
     printf("║  CAMERA                                          ║\n");
-    printf("║   Z / X         Zoom in / out                    ║\n");
-    printf("║   Mouse Wheel   Zoom in / out                    ║\n");
-    printf("║   Arrow Up/Down Zoom in / out                    ║\n");
+    printf("║   Z / X           Zoom in / out                  ║\n");
+    printf("║   Mouse Wheel     Zoom in / out                  ║\n");
+    printf("║   Arrow Up/Down   Zoom in / out                  ║\n");
+    printf("║   LMB drag        Rotate entire scene            ║\n");
+    printf("║   MMB drag        Pan camera                     ║\n");
+    printf("║   RMB click       Reset camera                   ║\n");
+    printf("║   C               Reset camera (keyboard)        ║\n");
     printf("╠══════════════════════════════════════════════════╣\n");
     printf("║  PLANET SELECTION & SCALING                      ║\n");
     printf("║   1  Mercury    5  Jupiter                       ║\n");
@@ -645,6 +710,7 @@ int main(int argc, char** argv)
     glutKeyboardFunc(keyboardCallback);
     glutSpecialFunc(specialKeyCallback);
     glutMouseFunc(mouseCallback);
+    glutMotionFunc(motionCallback);   // mouse drag: left=rotate, middle=pan
 
     // Establish the initial orthographic projection
     reshape(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -662,7 +728,6 @@ int main(int argc, char** argv)
     //   reshape() on window resize. Our code only runs inside these callbacks.
     glutMainLoop();
 
-    // Clean up (only reached if glutMainLoop returns, which it normally won't)
-    delete g_sun;
+    // g_sun is a unique_ptr — destructor runs automatically if loop exits
     return 0;
 }
