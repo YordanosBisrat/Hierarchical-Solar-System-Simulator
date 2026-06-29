@@ -101,24 +101,16 @@ void clearScene()
 // =============================================================================
 // setupCamera(zoom)
 // =============================================================================
-// Applies the zoom level by scaling the entire scene uniformly.
-//
-// GRAPHICS CONCEPT — Camera as Inverse World Transform:
-//   Legacy OpenGL has no camera object. "Zooming in" is equivalent to scaling
-//   the world up (making everything appear larger). We apply a uniform
-//   glScalef before any planet transforms so every subsequent draw call
-//   is affected by the zoom.
-//
-// IMPORTANT: After calling setupCamera, do NOT call glLoadIdentity() again
-// before drawing planets/orbits — that would wipe the zoom scale.
-// Use glPushMatrix/glPopMatrix to save and restore within the zoomed frame.
+// NOTE: In this project, zoom is handled via glOrtho in updateProjection()
+// (main.cpp), and rotation/pan are applied in display() before calling
+// drawSolarSystem(). This function is intentionally a no-op — the camera
+// transform is already on the modelview stack when drawing begins.
+// It is kept in the interface for structural completeness.
 // =============================================================================
 void setupCamera(float /*zoom*/)
 {
-    // Intentionally empty.
-    // Zoom is handled entirely by updateProjection() in main.cpp via glOrtho.
-    // Do NOT touch the modelview here — it is already set to identity by
-    // the display() function before drawSolarSystem() is called.
+    // Camera transform applied in display() via glTranslatef + glRotatef
+    // before drawSolarSystem() is called. Nothing to do here.
 }
 
 // =============================================================================
@@ -505,6 +497,22 @@ void drawHUD(const SimState&            simState,
             drawText(panelX, panelY, zoomStr.str());
             panelY -= lineH;
 
+            // Scene rotation
+            std::ostringstream rotStr;
+            rotStr << "Rotation: " << std::fixed << std::setprecision(1)
+                   << simState.sceneRotation << " deg";
+            glColor3f(0.8f, 0.7f, 1.0f);
+            drawText(panelX, panelY, rotStr.str());
+            panelY -= lineH;
+
+            // Elapsed simulation time
+            std::ostringstream timeStr;
+            timeStr << "Sim time: " << std::fixed << std::setprecision(1)
+                    << simState.elapsedTime << "s";
+            glColor3f(0.7f, 0.9f, 0.7f);
+            drawText(panelX, panelY, timeStr.str());
+            panelY -= lineH;
+
             // Selected planet
             if (simState.selectedPlanet >= 0 &&
                 simState.selectedPlanet < static_cast<int>(planets.size()))
@@ -525,7 +533,7 @@ void drawHUD(const SimState&            simState,
             // Controls reference (bottom left)
             // ---------------------------------------------------------------
             float ctrlX = 12.0f;
-            float ctrlY = 130.0f;
+            float ctrlY = 160.0f;
             float ctrlH = 16.0f;
 
             glColor3f(0.7f, 0.7f, 0.9f);
@@ -538,6 +546,10 @@ void drawHUD(const SimState&            simState,
             drawText(ctrlX, ctrlY, "R       Reverse time");         ctrlY -= ctrlH;
             drawText(ctrlX, ctrlY, "T       Reset speed");          ctrlY -= ctrlH;
             drawText(ctrlX, ctrlY, "Z / X   Zoom in / out");        ctrlY -= ctrlH;
+            drawText(ctrlX, ctrlY, "LMB drag  Rotate scene");       ctrlY -= ctrlH;
+            drawText(ctrlX, ctrlY, "MMB drag  Pan camera");         ctrlY -= ctrlH;
+            drawText(ctrlX, ctrlY, "RMB     Reset camera");         ctrlY -= ctrlH;
+            drawText(ctrlX, ctrlY, "C       Reset camera (key)");   ctrlY -= ctrlH;
             drawText(ctrlX, ctrlY, "1-8     Select planet");        ctrlY -= ctrlH;
             drawText(ctrlX, ctrlY, "[ / ]   Scale planet size");    ctrlY -= ctrlH;
             drawText(ctrlX, ctrlY, "ESC     Exit");
