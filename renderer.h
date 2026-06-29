@@ -32,6 +32,24 @@ struct SimState {
     int   selectedPlanet;   // index into planets vector (-1 = none selected)
     float elapsedTime;      // total simulation time in seconds (for animations)
 
+    // Camera rotation (mouse drag rotates entire solar system around Z axis)
+    float sceneRotation;    // degrees, accumulated from mouse drag
+
+    // Camera pan (middle-mouse drag or WASD)
+    float panX;             // world-space horizontal offset
+    float panY;             // world-space vertical offset
+
+    // Mouse drag state (not serialised — runtime only)
+    bool  isDragging;       // true while left mouse button is held
+    int   dragStartX;       // window pixel X where drag began
+    int   dragStartY;       // window pixel Y where drag began
+    float dragStartRotation;// sceneRotation value when drag started
+    bool  isPanning;        // true while middle mouse button is held
+    int   panStartX;
+    int   panStartY;
+    float panStartWorldX;
+    float panStartWorldY;
+
     // Constructor — sensible defaults
     SimState()
         : timeScale(1.0f)
@@ -39,6 +57,18 @@ struct SimState {
         , zoomLevel(1.0f)
         , selectedPlanet(-1)
         , elapsedTime(0.0f)
+        , sceneRotation(0.0f)
+        , panX(0.0f)
+        , panY(0.0f)
+        , isDragging(false)
+        , dragStartX(0)
+        , dragStartY(0)
+        , dragStartRotation(0.0f)
+        , isPanning(false)
+        , panStartX(0)
+        , panStartY(0)
+        , panStartWorldX(0.0f)
+        , panStartWorldY(0.0f)
     {}
 };
 
