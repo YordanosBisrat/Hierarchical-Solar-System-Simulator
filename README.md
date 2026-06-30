@@ -9,6 +9,13 @@ primitives. Every shape, orbit, glow, and ring is generated programmatically
 
 ---
 
+
+## 🎥 Demo
+
+Watch the project demonstration here:
+
+**Demo Video:** https://youtu.be/eoILI8shCdA
+
 ---
 
 ## 👥 Team Members
