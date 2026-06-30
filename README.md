@@ -1,5 +1,10 @@
 # 🪐 Hierarchical Solar System Simulator
 
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+![OpenGL](https://img.shields.io/badge/OpenGL-FreeGLUT-green.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-orange.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 > **Computer Graphics Capstone Project**
 > SITE — 3rd Year | OpenGL + FreeGLUT | C++17
 
@@ -12,9 +17,7 @@ primitives. Every shape, orbit, glow, and ring is generated programmatically
 
 ## 🎥 Demo
 
-Watch the project demonstration here:
-
-**Demo Video:** https://youtu.be/eoILI8shCdA
+🎥 **Watch the Demo:** [YouTube Demo](https://youtu.be/eoILI8shCdA)
 
 ---
 
