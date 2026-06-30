@@ -76,15 +76,17 @@ position calculations are needed for child objects.
 
 ## Screenshots
 
-```
-[ Replace this section with actual screenshots after running the project ]
+### Full View
 
-Suggested screenshots:
-  1. Full solar system view at default zoom
-  2. Zoomed in on Saturn showing ring system
-  3. Earth-Moon system with selection highlight active
-  4. Simulation running in reverse (REVERSED label visible in HUD)
-```
+![Main Window](screenshots/full_view.jpg)
+
+### Zoomed-in View
+
+![Zoomed in View](screenshots/zoomed_in.jpg)
+
+### Selected Planet
+
+![Selection Highlight](screenshots/selection_highlight.jpg)
 
 ---
 
