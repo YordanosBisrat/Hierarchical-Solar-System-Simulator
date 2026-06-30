@@ -9,6 +9,20 @@ primitives. Every shape, orbit, glow, and ring is generated programmatically
 
 ---
 
+---
+
+## 👥 Team Members
+
+| Name | ID |
+|------|------|
+| Abraham Yonatan | UGR/4463/16 |
+| Christian Elias | UGR/8399/16 |
+| Menal Abdulkadir | UGR/7907/16 |
+| Natnael Henok | UGR/9671/16 |
+| Ruth Tewodros | UGR/7383/16 |
+| Yordanos Bisrat | UGR/3362/16 |
+| Selam Tewodros | UGR/2331/16 |
+
 ## 📋 Table of Contents
 
 - [Project Overview](#project-overview)
